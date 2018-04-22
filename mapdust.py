@@ -7,10 +7,8 @@ import subprocess as sb
 dates, hours = range(11,19), (0, 6,12, 18)
 trname, dcname = "Transport_rate_map_2018-04-{}_{}.png", "D_concentration_map_2018-04-{}_{}.png"
 print dates, hours
-if (dcname.format(date, hour) in sb.check_output(("ls"))
-    and trname.format(date, hour) in sb.check_output(("ls"))):
-        print "we did this before"
-        exit()
+
+
 
 from matplotlib.mlab import prctile_rank
 print "importing  plt"
@@ -37,6 +35,7 @@ def plot_transport_rate(savefilename = trname.format(date, str(hour).rjust(2,"0"
         plt.close()
 
 def plot_dust_density(savefilename = dcname.format(date, str(hour).rjust(2,"0"))):
+        """should probably be refactured into a single function with the one above"""
         print "plotting concentrations"
         mymap.contourf(x,y,aggregateddust,np.arange(0,20) ** 1.5 * 0.00004 , cmap=plt.cm.jet)
         mymap.colorbar()
@@ -76,6 +75,11 @@ def get_data_by_name(name, gribfile, **kwargs):
 
 for date in dates:
     for hour in hours:
+      if (dcname.format(date, hour) in sb.check_output(("ls"))
+                and trname.format(date, hour) in sb.check_output(("ls"))):
+                print "we did this before"
+      else:
+        exit()
         print "loading dustflie"
         dustraw = [msg for msg in
                     pygrib.open("dust_concentrations2018-04-{}-{}:00:00.grib".format(str(date), str(hour).rjust(2,"0")))
@@ -101,16 +105,11 @@ for date in dates:
         dustmasses = densities * totaldustmmr
         
         windspeeds = np.array([[msg.data()[0] for msg in tempraw if msg.step == 0 and msg.level == level and msg.name == "V component of wind"][0] for level in levels])
-        
         print "done defining alt  - windspeeds"
-        
         print "attempting to calculate aggregate dust mass per m2"
         aggregateddust = interpolate_totals (altitudes, dustmasses)
-                                
         print "attempting to caclulate transport rates"
         aggregated_transport_rate = interpolate_totals(altitudes, dustmasses * windspeeds)
-
-          
         print "done calculating aggregated values"
         
         #feedback about maximum values, useful for setting adequate thresholds in aggregate functions' colormaps
