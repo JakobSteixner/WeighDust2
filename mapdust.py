@@ -4,7 +4,7 @@ import sys
 import subprocess as sb
 
 
-dates, hours = range(11,19), (0, 6,12, 18)
+dates, hours = range(11,19), (0, 12)
 trname, dcname = "Transport_rate_map_2018-04-{}_{}.png", "D_concentration_map_2018-04-{}_{}.png"
 print dates, hours
 
@@ -23,7 +23,10 @@ import scipy.interpolate
 
 mymap = Basemap(projection="aeqd",lat_0=48,lon_0=16, width=4000000, height=4000000)
 
-def plot_transport_rate(savefilename = trname.format(date, str(hour).rjust(2,"0"))):
+def plot_transport_rate(savefilename = None):
+        if savefilename == None:
+                savefilename = trname.format(date, str(hour).rjust(2,"0"))
+                print savefilename, "savefilename"
         print "plotting contourplot"
         mymap.contourf(x,y,aggregated_transport_rate,np.arange(-100,110,10) ** 3 * 0.00000005 ,cmap=plt.cm.jet)
         mymap.colorbar()
@@ -34,7 +37,10 @@ def plot_transport_rate(savefilename = trname.format(date, str(hour).rjust(2,"0"
         #plt.show() # uncomment for interactive version
         plt.close()
 
-def plot_dust_density(savefilename = dcname.format(date, str(hour).rjust(2,"0"))):
+def plot_dust_density(savefilename = None):
+        if savefilename == None:
+                savefilename = trname.format(date, str(hour).rjust(2,"0"))
+                print savefilename, "savefilename"
         """should probably be refactured into a single function with the one above"""
         print "plotting concentrations"
         mymap.contourf(x,y,aggregateddust,np.arange(0,20) ** 1.5 * 0.00004 , cmap=plt.cm.jet)
@@ -75,11 +81,12 @@ def get_data_by_name(name, gribfile, **kwargs):
 
 for date in dates:
     for hour in hours:
-      if (dcname.format(date, hour) in sb.check_output(("ls"))
-                and trname.format(date, hour) in sb.check_output(("ls"))):
-                print "we did this before"
-      else:
-        exit()
+        print date, hour
+      #if (dcname.format(date, hour) in sb.check_output(("ls"))
+      #          and trname.format(date, hour) in sb.check_output(("ls"))):
+      #          print "we did this before"
+      #else:
+      #  exit()
         print "loading dustflie"
         dustraw = [msg for msg in
                     pygrib.open("dust_concentrations2018-04-{}-{}:00:00.grib".format(str(date), str(hour).rjust(2,"0")))
