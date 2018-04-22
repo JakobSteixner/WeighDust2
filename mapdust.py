@@ -39,7 +39,7 @@ def plot_transport_rate(savefilename = None):
 
 def plot_dust_density(savefilename = None):
         if savefilename == None:
-                savefilename = trname.format(date, str(hour).rjust(2,"0"))
+                savefilename = dcname.format(date, str(hour).rjust(2,"0"))
                 print savefilename, "savefilename"
         """should probably be refactured into a single function with the one above"""
         print "plotting concentrations"
