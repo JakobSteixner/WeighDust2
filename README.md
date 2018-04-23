@@ -30,7 +30,3 @@ Legal
 ===
 
 No warranty, free reuse (Public Domain
-Legal
-===
-
-No warranty, free reuse (Public Domain).
