@@ -28,16 +28,18 @@ for idx,time in enumerate(dr.timeslots):
                   timeslot=time,
                   scale=np.arange(-100,110,10) ** 3 * 0.00000005,
                   name=dr.aggregatedrate.name)
-
-# turn maps into animated gif (assumes ImageMagick is installed)
-subprocess.call(("convert -delay 150 -loop North_South_Dust_Transport*png North_South_Transport.gif"))
+try:
+    # turn maps into animated gif (assumes ImageMagick is installed)
+    subprocess.call(("convert -delay 150 -loop North_South_Dust_Transport*png North_South_Transport.gif"))
+except:
+    pass
 
 # create a series of images with dust/m2
 
 for idx,time in enumerate(dr.timeslots):
     em.densitymap(savefilename="Dust_Volume_{}_{}.png".format(*time),
                   formatsample=dr.dataformatsample[1:],
-                  title = "North-South Dust Transport, 2018-04{}, {}:00".format(*time),
+                  title = "Total Dust Volume, 2018-04{}, {}:00".format(*time),
                   array3d=dr.aggregateddust.data[idx],
                   timeslot=time,
                   scale="posonly", # string identifier of a predefined scale that seemed to work well
@@ -45,5 +47,5 @@ for idx,time in enumerate(dr.timeslots):
 
 # plot the volume of dust crossing the 38th parallel in the central and eastern Mediterranean
 p = Plotter(dr)
-p.plotlatitude(["aggregatedrate", "grosstransport"], 38.0, 8., 28., title="Gross_Net_dust_transports{}_{}.png")
+p.plotlatitude(["aggregatedrate", "grosstransport"], 38.0, 8., 28., title="Gross_Net_dust_transports_2018_05_{}-{}.png".format(*dr.timeslots[0,(0,-1)]))
 
