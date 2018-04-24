@@ -17,7 +17,15 @@ For downloading the raw data, you need a free account with the [European Centre 
 
 Usage
 ===
-Just a couple scripts at the moment...
+Modular version
+---------
+`DataReader` parses the `.grib`-files, `plottingtools` has two classes speciallydesigned to deas with DR's output, one for producing maps (using Basemap), the other one for line graphs.
+
+The script `sample.py` illustrates these module's use.
+
+Script version
+---------
+A single fully functioning script prototype is also available as `mapdust.py`.
 
 `python request.py` (pulls the required data from ECMWF; most of the keys in the request syntax are self explanatory, if you need more details, start [here](https://software.ecmwf.int/wiki/display/WEBAPI/Brief+MARS+request+syntax))
 `python mapdust.py` (draws the maps)
