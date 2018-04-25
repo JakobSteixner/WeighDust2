@@ -35,14 +35,14 @@ class Euromap():
         self.mymap = Basemap(projection="aeqd",lat_0=lat,lon_0=lon, width=width * 1000, height=height * 1000, **kwargs)
         
         
-    def densitymap_prepare(self, formatsample, array3d, timeslot, savefilename = None, scale="posonly", name="Concentration"):
+    def densitymap_prepare(self, formatsample, array3d, timeslot, countries=False, savefilename = None, scale="posonly", name="Concentration", title=None):
         """Prepares a density map without finalising it.
         Can be called directly for greater freedom to manipulate
         the map, or through self.densitymap
         """
         scales = {"posonly":np.arange(0,20) ** 1.5 * 0.00004, "twosided":np.arange(-100,110,10) ** 3 * 0.000000004}
         try: scale = scales[scale]
-        except: #assume that an explicit scale has been provided
+        except: #assume that an explicit scale has been provided; 
                 scale = scale
         date,hour = timeslot
         if savefilename == None:
@@ -53,8 +53,13 @@ class Euromap():
         self.mymap.contourf(x,y,array3d,scale, cmap=plt.cm.jet)
         self.mymap.colorbar()
         self.mymap.drawcoastlines()
-        plt.plot(*self.mymap(np.arange(8,29), np.zeros(21)+38),color="black")
-        plt.title(name+ " 2018-04-{}, {}:00".format(date, str(hour).rjust(2,"0")))
+	if countries==True:
+            self.mymap.drawcountries()
+	plt.plot(*self.mymap(np.arange(8,29), np.zeros(21)+38),color="black")
+	if not title:
+            plt.title(name+ " 2018-04-{}, {}:00".format(date, str(hour).rjust(2,"0")))
+        else:
+	    plt.title(title)
     def densitymap_finalise(self,savefilename):
         """finalises a density map prepared by densitymap_prepare"""
         plt.savefig(savefilename)

@@ -42,6 +42,7 @@ for idx,time in enumerate(dr.timeslots):
                   title = "Total Dust Volume, 2018-04{}, {}:00".format(*time),
                   array3d=dr.aggregateddust.data[idx],
                   timeslot=time,
+		  countries=True,
                   scale="posonly", # string identifier of a predefined scale that seemed to work well
                   name=dr.aggregateddust.name)
 
