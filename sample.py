@@ -37,7 +37,7 @@ except:
 # create a series of images with dust/m2
 
 for idx,time in enumerate(dr.timeslots):
-    em.densitymap(savefilename="Dust_Volume_{}_{}.png".format(*time),
+    em.densitymap(savefilename="Dust_Volume_with_borders_{}_{}.png".format(*time),
                   formatsample=dr.dataformatsample[1:],
                   title = "Total Dust Volume, 2018-04{}, {}:00".format(*time),
                   array3d=dr.aggregateddust.data[idx],
