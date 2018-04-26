@@ -1,20 +1,20 @@
-dates, hours = range(14,16), (0, 12)
-trname, dcname = "Transport_rate_map_2018-04-{}_{}.png", "D_concentration_map_2018-04-{}_{}.png"
-print dates, hours
-from matplotlib.mlab import prctile_rank
-print "importing  plt"
-import matplotlib.pyplot as plt
-print "importing numpy"
+#/usr/bin/python
+
 import numpy as np
-print "importing Basemap"        
-from mpl_toolkits.basemap import Basemap as Basemap
-print "importing pygrib"
 import pygrib
 import scipy.interpolate
 import itertools
 
-earthradius = 6388000.
+earthradius = 6388000. 
 
+try: trname, dcname = open(".mapnametemplate", "r").readlines()
+except: trname, dcname = "Transport_rate_map_2018-04-{}_{}.png", "D_concentration_map_2018-04-{}_{}.png"
+
+try: inputdusttemplate, inputtemptemplate = [s.strip() for s in open(".inputfilenametemplate", "r").readlines()]
+except: inputdusttemplate, inputtemptemplate = "dust_concentrations2018-04-{}-{}:00:00.grib", "temp_v_gh2018-04-{}-{}:00:00.grib"
+
+print inputdusttemplate, inputtemptemplate
+print trname, dcname
 
 def parlength(par, segment=360, radius = earthradius):
         return radius * np.cos(np.radians(par)) * np.radians(segment)
@@ -61,30 +61,36 @@ class TypedData():
 
 class DataReader:
     def __init__(self, timeslots,
-                 dusttemplate = "dust_concentrations2018-04-{}-{}:00:00.grib",
-                 temptemplate = "temp_v_gh2018-04-{}-{}:00:00.grib",
+                 dusttemplate = inputdusttemplate,
+                 temptemplate = inputtemptemplate,
+                 multidayfiles = False
                  ):
         self.dates = min(timeslots[0]), max(timeslots[0])
         timeslots = list(itertools.product(*timeslots))
-        self.gribdata_temps, self.gribdata_dust = {}, {}
-    
+        self.gribdata_temps, self.gribdata_dust = [],[]
+        #self.gribdata_temps, self.gribdata_dust = {}, {}
+        # self.
+        #if multidayfiles == True:
+        #        pass # not implemented
+        #else:
         for slot in [s for s in timeslots]:
-            try:
-                self.gribdata_dust[slot] = [msg for msg in
-                    pygrib.open(dusttemplate.format(*[str(field).rjust(2,"0") for field in slot]))
-                    if msg.step == 0]
-                self.gribdata_temps[slot] = [msg for msg in
-                    pygrib.open(temptemplate.format(*[str(field).rjust(2,"0") for field in slot]))
-                    if msg.step == 0]
-                print "loaded data for", slot
-            except:
-                timeslots.remove(slot)
-                print "no data available for", slot
+                try:
+                    self.gribdata_dust.append([msg for msg in
+                        pygrib.open(dusttemplate.format(*[str(field).rjust(2,"0") for field in slot]))
+                        if msg.step == 0])
+                    self.gribdata_temps.append([msg for msg in
+                        pygrib.open(temptemplate.format(*[str(field).rjust(2,"0") for field in slot]))
+                        if msg.step == 0])
+                    print "loaded data for", slot
+                except:
+                    timeslots.remove(slot)
+                    print "no data available for", slot
         self.timeslots = timeslots
+        self.levels = levels = set([msg.level for msg in self.gribdata_dust[0]])
         self.dataformatsample = np.array(msg.data()) # assumes all input data has same grid and geographical coverage
-        self.levels = levels = set([msg.level for msg in self.gribdata_dust[timeslots[0]]])
         self.maplimits = (northernlimit, southernlimit, westernlimit, easternlimit) = list(self.dataformatsample[1,(0,-1),0]) + list(self.dataformatsample[2,0,(0,-1)])
-        self.size = latgridpoints, longridpoints = self.dataformatsample.shape[1:3]
+        self.size = latgridpoints, longridpoints = self.dataformatsample.shape[1:]
+        self.gribdata_temps = np.array(self.gribdata_temps)
         self.extract()
         self.timeslots = np.array(self.timeslots)
     def get_data_by_name(self, name, gribfile, **kwargs):
@@ -92,18 +98,14 @@ class DataReader:
         gribfile = iterable of gribmessages
         kwargs (not implemented atm) = further restrictions, e.g. selecting for
         date/time/step if file is multi-day"""
-        return np.array([[msg.data()[0] for msg in gribfile if msg.level == level and msg.name == name][0] for level in self.levels])
+        try: return np.array([[msg.data()[0] for msg in gribfile if msg.level == level and msg.name == name][0] for level in self.levels])
+        except: return np.array([self.get_data_by_name(name,subarray) for subarray in gribfile])
     def extract(self):
-        self.altitudes = TypedData(
-                np.array(
-                        [self.get_data_by_name("Geopotential Height",self.gribdata_temps[timeslot])
-                         for timeslot in self.timeslots]),
+        self.altitudes = TypedData(self.get_data_by_name("Geopotential Height",self.gribdata_temps),
                 "Altitudes", self.dates, unit="m"
                 )
-        self.temperatures = TypedData(
-                np.array(
-                        [self.get_data_by_name("Temperature", self.gribdata_temps[timeslot])
-                         for timeslot in self.timeslots]),
+        print "successfully extracted altitudes with new formula"
+        self.temperatures = TypedData(self.get_data_by_name("Temperature", self.gribdata_temps),
                 "Temperature", self.dates, unit = "K"
                 )
         self.airdensities = TypedData(
@@ -114,16 +116,13 @@ class DataReader:
                 )
         self.totaldustmmr = TypedData(
                 np.array(
-                        [np.sum([self.get_data_by_name(name, self.gribdata_dust[slot])
-                                 for  name in set([msg.name for msg in self.gribdata_dust[slot]])],0)
-                         for slot in self.timeslots]),
+                        np.sum([self.get_data_by_name(name, self.gribdata_dust)
+                                 for  name in set([msg.name for msg in self.gribdata_dust[0]])],0)),
                 "Dust by mass", self.dates, unit="kg kg$^{-1}$"
                 )
         #print self.totaldustmmr.shape
         self.dustmasses = TypedData(self.airdensities.data * self.totaldustmmr.data, "Dust concentrations", self.dates, unit="kg m$^{-3}$")
-        self.windspeeds = TypedData(
-                np.array([self.get_data_by_name("V component of wind", self.gribdata_temps[timeslot])
-                          for timeslot in self.timeslots]),
+        self.windspeeds = TypedData(self.get_data_by_name("V component of wind", self.gribdata_temps),
                 "Wind speeds (N-S component)", self.dates, unit="m s$^{-3}$"
                 )
         #assert self.dustmasses.shape == self.altitudes.shape
@@ -142,7 +141,7 @@ class DataReader:
         southward = (abstransports - self.aggregatedrate.data) / 2.0
         self.grosstransport = TypedData(
                 abstransports - southward,
-                "Gross northward dust transfer", self.dates, "kg m$^{-1}$"
+                "Gross northward dust transfer", self.dates, "kg m$^{-1} s$^{-1}$"
                 )
         #assert self.grosstransport.data.shape == self.aggregatedrate.data.shape
     def findclosest(self, formatsample, value, indexingcorrection=False, maxdiff = 3):
@@ -155,7 +154,7 @@ class DataReader:
                         second lontitude or latitude
             maxdiff: maximal allowable distance.
             """
-            print "No precise match found for coordinate", value
+            #print "No precise match found for coordinate", value
             if value in formatsample:
                     #print "about to return", (value, np.nonzero(value == formatsample)[0][0])
                     return [value, np.nonzero(value == formatsample)[0][0]]
@@ -208,62 +207,3 @@ class DataReader:
         if coords[3] <= coords[2]:
                 coords[3] = coords[2] + np.array((0,1))
         return np.array(coords)
-
-
-"""
-
-dr = DataReader((range(14,17), (0,12)))
-
-parslice = dr.get_x_y(38,38, 8, 28)
-
-class Plotter():
-    def __init__(self, processeddata):
-        self.data = processeddata
-        #print dr.aggregatedrate[:,range(*parslice[:2,1]+(0,1))][:,:,range(*parslice[2:,1]+(0,1))]
-    def plotlonslice(self,lon,lat0,lat1):
-        dr = self.data
-        parslice = dr.get_x_y(lat_0,lat1, lon,lon).astype("int")
-    def plotlatslice(self, datatype, lat, lon0=None,lon1=None):
-        dr = self.data
-        data = [eval("dr."+ dataset) for dataset in datatype]
-        print data
-        time.sleep(3)
-        parslice = dr.get_x_y(lat,lat, lon0, lon1).astype("int")
-        print "plotting data"
-        for dataset in data:
-            plt.plot(
-                np.array(dr.timeslots)[:,0]+(np.array(dr.timeslots)[:,1]/24.),
-                np.average(
-                        dataset[:,np.arange(*parslice[:2,1]+(0,1))][:,0,np.arange(*parslice[2:,1]+(0,1))],
-                        1)
-                    * parlength(lat,lon1-lon0) * 3600,
-                label= "net transport rate"
-            )
-            
-        
-        #plt.plot(
-        #        np.array(dr.timeslots)[:,0]+(np.array(dr.timeslots)[:,1]/24.),
-        #        np.average(
-        #                datat[:,np.arange(*parslice[:2,1]+(0,1))][:,0,np.arange(*parslice[2:,1]+(0,1))],
-        #                1)
-        #            * parlength(lat,lon1-lon0) * 3600,
-        #        label= "gross northward rate"
-        #)
-        
-        plt.legend(loc="upper left")
-        plt.ylabel("kg/hour")
-        plt.xlabel("Day")
-        plt.title("Northward mass transport across {}N, {}-{}E, April{}-{}, 2018".format(lat, lon0, lon1, *dr.timeslots[(0,-1),0]))
-        plt.show()
-
-plotter = plottingtools(dr)
-plotter.plotlatslice(["aggregateddust"], 38, 8, 28)
-
-plotter.plotlatslice(38)
-
-#print dr.aggregatedrate[:,range(*parslice[:2,1]+(0,1))][0,,range(*parslice[2:,1]+(0,1))].shape
-#print np.average(dr.aggregatedrate[:,range(*parslice[:2,1]+(0,1))][0,,range(*parslice[2:,1]+(0,1))])
-print dr.aggregatedrate.shape
-plt.plot(dr.aggregatedrate[:,range(*parslice[:2,1]+(0,1))][:,:,range(*parslice[2:,1]+(0,1))])
-plt.show()
-"""
