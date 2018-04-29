@@ -167,15 +167,20 @@ class DataReader:
                 "Column dust load", self.dates, unit="kg m$^{-2}$"
                 )
     def getrates(self):
-        print "interpolating N-S net dust transport rates / m"
-        self.aggregatedrate = TypedData(
+        try:
+            # abort if it has been done before
+            a,b = self.aggregatedrate, self.grosstransport
+            return None
+        except NameError:
+            print "interpolating N-S net dust transport rates / m"
+            self.aggregatedrate = TypedData(
                 interpolate_totals (self.altitudes.data, self.dustmasses.data * self.windspeeds.data, self.size),
                 "Net N-S dust transfer rate", self.dates, unit="kg m$^{-1}$ s^${-1}$"
                 )
-        print "interpolating absolute rates"
-        abstransports = interpolate_totals(self.altitudes.data, self.dustmasses.data * self.windspeeds.data, self.size, force_abs=True)
-        southward = (abstransports - self.aggregatedrate.data) / 2.0
-        self.grosstransport = TypedData(
+            print "interpolating absolute rates"
+            abstransports = interpolate_totals(self.altitudes.data, self.dustmasses.data * self.windspeeds.data, self.size, force_abs=True)
+            southward = (abstransports - self.aggregatedrate.data) / 2.0
+            self.grosstransport = TypedData(
                 abstransports - southward,
                 "Gross northward dust transfer", self.dates, "kg m$^{-1}$ s^${-1}$"
                 )
