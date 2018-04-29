@@ -166,18 +166,19 @@ class DataReader:
                 interpolate_totals (self.altitudes.data, self.dustmasses.data, self.size),
                 "Column dust load", self.dates, unit="kg m$^{-2}$"
                 )
-        #print "interpolating N-S net dust transport rates / m"
-        #self.aggregatedrate = TypedData(
-        #        interpolate_totals (self.altitudes.data, self.dustmasses.data * self.windspeeds.data, self.size),
-        #        "Net N-S dust transfer rate", self.dates, unit="kg m$^{-1}$ s^${-1}$"
-        #        )
-        #print "interpolating absolute rates"
-        #abstransports = interpolate_totals(self.altitudes.data, self.dustmasses.data * self.windspeeds.data, self.size, force_abs=True)
-        #southward = (abstransports - self.aggregatedrate.data) / 2.0
-        #self.grosstransport = TypedData(
-        #        abstransports - southward,
-        #        "Gross northward dust transfer", self.dates, "kg m$^{-1}$ s^${-1}$"
-        #        )
+    def getrates(self):
+        print "interpolating N-S net dust transport rates / m"
+        self.aggregatedrate = TypedData(
+                interpolate_totals (self.altitudes.data, self.dustmasses.data * self.windspeeds.data, self.size),
+                "Net N-S dust transfer rate", self.dates, unit="kg m$^{-1}$ s^${-1}$"
+                )
+        print "interpolating absolute rates"
+        abstransports = interpolate_totals(self.altitudes.data, self.dustmasses.data * self.windspeeds.data, self.size, force_abs=True)
+        southward = (abstransports - self.aggregatedrate.data) / 2.0
+        self.grosstransport = TypedData(
+                abstransports - southward,
+                "Gross northward dust transfer", self.dates, "kg m$^{-1}$ s^${-1}$"
+                )
         #assert self.grosstransport.data.shape == self.aggregatedrate.data.shape
     def findclosest(self, formatsample, value, indexingcorrection=False, maxdiff = 3):
             """Find closest grid point if coorinates do not exactly
