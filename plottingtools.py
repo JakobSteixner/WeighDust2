@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
      
+import matplotlib.pyplot as plt
 from mpl_toolkits.basemap import Basemap
 import numpy as np
 import string
@@ -53,13 +54,13 @@ class Euromap():
         self.mymap.contourf(x,y,array3d,scale, cmap=plt.cm.jet)
         self.mymap.colorbar()
         self.mymap.drawcoastlines()
-	if countries==True:
+        if countries==True:
             self.mymap.drawcountries()
-	plt.plot(*self.mymap(np.arange(8,29), np.zeros(21)+38),color="black")
-	if not title:
+        plt.plot(*self.mymap(np.arange(8,29), np.zeros(21)+38),color="black")
+        if not title:
             plt.title(name+ " 2018-04-{}, {}:00".format(date, str(hour).rjust(2,"0")))
         else:
-	    plt.title(title)
+            plt.title(title)
     def densitymap_finalise(self,savefilename):
         """finalises a density map prepared by densitymap_prepare"""
         plt.savefig(savefilename)
@@ -100,7 +101,7 @@ class Plotter():
                 scalefactors.append(1)
         return scalefactors
 
-    def plotlatitude(self, datatype, lat, lon0=None,lon1=None, aggregate=True, secondstohours = False, title="", scale=False, plotgeo=False, ylabel=None, timeslot=None, scale_to_global_max=True, interactive=False):
+    def plotlatitude(self, datatype, lat, lon0=None,lon1=None, aggregate=True, secondstohours = False, title="", scale=False, plotgeo=False, ylabel=None, timeslot=None, scale_to_global_max=True, interactive=False, forcenolabel=False):
         """Uses the class's DataReader instance to plot values along
         a (segment of a) given latitude. Default behavior is to plot
         aggregate or average values for a given point in time along
@@ -108,7 +109,7 @@ class Plotter():
         plots time-aggregated totals/averages for a given lontitude along
         the parallel.
         Parameters:
-        datatype -- tuple of strings referring to the TypedData instances
+        datatype -- iterable of strings referring to the TypedData instances
                     of self.parseddata
         lat, lon0, lon1 -- the parallel to be sampled, and start end entpoints
               if lon0 and lon1 are None, the entire range of the parallel
@@ -175,7 +176,7 @@ class Plotter():
             unit = dataset.unit
             # only create a label when different data are plotted and/or have to be scaled
             scalenotif = int(scale == True and scalefactors[idx] != 1.0) * (", scaled * %.1f" % scalefactors[idx])
-            labelstring = (individuallabels + (len(sourcedata) > 1)) * string.join([dataset.name,  dataset.unit], " ") + scalenotif
+            labelstring = ((bool(individuallabels) and len(sourcedata) > 1) * string.join([dataset.name,  dataset.unit], "") + scalenotif) * (not forcenolabel)
             
             unit = dataset.unit
             if plotgeo == True:

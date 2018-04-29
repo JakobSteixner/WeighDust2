@@ -63,7 +63,8 @@ class DataReader:
     def __init__(self, timeslots,
                  dusttemplate = inputdusttemplate,
                  temptemplate = inputtemptemplate,
-                 multidayfiles = False
+                 multidayfiles = False,
+                 area = [40,121,0,121]
                  ):
         self.dates = min(timeslots[0]), max(timeslots[0])
         timeslots = list(itertools.product(*timeslots))
@@ -86,63 +87,97 @@ class DataReader:
                     timeslots.remove(slot)
                     print "no data available for", slot
         self.timeslots = timeslots
+        self.grid = abs(msg.data()[2][0][1] - msg.data()[2][0][0]) % 360.0
+        
         self.levels = levels = set([msg.level for msg in self.gribdata_dust[0]])
-        self.dataformatsample = np.array(msg.data()) # assumes all input data has same grid and geographical coverage
+        area = np.array(area)
+        print area
+        print 90.-area[:2], self.grid
+        self.areaindices = ((np.arange(*(90.-area[:2])/self.grid)).astype(int),
+                (np.arange(*area[2:]/self.grid)%(360./self.grid)).astype(int))
+        print self.areaindices
+        rnl, rwl = rawnorthernlimit, rawwesternlimit = msg.data()[1][0][0], msg.data()[2][0][0]
+        
+        self.dataformatsample = np.array(msg.data())[:][:,self.areaindices[0]][:,:,self.areaindices[1]]
+        print self.dataformatsample.shape
+        #,np.arange(*self.area[;2],self.grid),np.arange(*self.area(2:),self.grid)] # assumes all input data has same grid and geographical coverage
         self.maplimits = (northernlimit, southernlimit, westernlimit, easternlimit) = list(self.dataformatsample[1,(0,-1),0]) + list(self.dataformatsample[2,0,(0,-1)])
         self.size = latgridpoints, longridpoints = self.dataformatsample.shape[1:]
-        self.gribdata_temps = np.array(self.gribdata_temps)
+        #self.gribdata_temps = np.array(self.gribdata_temps)
         self.extract()
         self.timeslots = np.array(self.timeslots)
+    def get_data_in_range(self, msg):
+        #print msg.data()
+        #print np.array(msg.data()).shape
+        #print np.array(msg.data())[0,self.areaindices[0],self.areaindices[1]].shape
+                
+        return np.array(msg.data())[0][self.areaindices[0]][:,self.areaindices[1]]
     def get_data_by_name(self, name, gribfile, **kwargs):
         """name = string = identifier of the gribmessage type to be collected
         gribfile = iterable of gribmessages
         kwargs (not implemented atm) = further restrictions, e.g. selecting for
         date/time/step if file is multi-day"""
-        try: return np.array([[msg.data()[0] for msg in gribfile if msg.level == level and msg.name == name][0] for level in self.levels])
-        except: return np.array([self.get_data_by_name(name,subarray) for subarray in gribfile])
+        try:
+                return np.array([[self.get_data_in_range(msg) for msg in gribfile if msg.level == level and msg.name == name][0] for level in self.levels])
+        except:
+                #print gribfile[0]
+                return np.array([self.get_data_by_name(name,subarray) for subarray in gribfile])
     def extract(self):
-        self.altitudes = TypedData(self.get_data_by_name("Geopotential Height",self.gribdata_temps),
-                "Altitudes", self.dates, unit="m"
-                )
-        print "successfully extracted altitudes with new formula"
-        self.temperatures = TypedData(self.get_data_by_name("Temperature", self.gribdata_temps),
-                "Temperature", self.dates, unit = "K"
-                )
-        self.airdensities = TypedData(
-                np.array(
-                        [100 * level / (287.058 * self.temperatures.data[:,idx])
-                         for idx,level in enumerate(self.levels)]).transpose(1,0,2,3),
-                "Air density", self.dates, unit = "kg m$^{-3}$"
-                )
+        print set([msg.name for msg in self.gribdata_dust[0]])
         self.totaldustmmr = TypedData(
                 np.array(
                         np.sum([self.get_data_by_name(name, self.gribdata_dust)
                                  for  name in set([msg.name for msg in self.gribdata_dust[0]])],0)),
                 "Dust by mass", self.dates, unit="kg kg$^{-1}$"
                 )
+        print "extracted dust mmrs (sums)"
+        print self.totaldustmmr.data.shape
+        del self.gribdata_dust
+        del msg
+        
+        self.altitudes = TypedData(self.get_data_by_name("Geopotential Height",self.gribdata_temps),
+                "Altitudes", self.dates, unit="m"
+                )
+        print "successfully extracted altitudes with new formula"
+        print self.altitudes.data.shape
+        self.temperatures = TypedData(self.get_data_by_name("Temperature", self.gribdata_temps),
+                "Temperature", self.dates, unit = "K"
+                )
+        print "extracted temperatures"
+        self.windspeeds = TypedData(self.get_data_by_name("V component of wind", self.gribdata_temps),
+                "Wind speeds (N-S component)", self.dates, unit="m s$^{-1}$"
+                )
+        print "extracted windspeeds"
+        del self.gribdata_temps
+        
+        self.airdensities = TypedData(
+                np.array(
+                        [100 * level / (287.058 * self.temperatures.data[:,idx])
+                         for idx,level in enumerate(self.levels)]).transpose(1,0,2,3),
+                "Air density", self.dates, unit = "kg m$^{-3}$"
+                )
+        print "calculated air densities"
         #print self.totaldustmmr.shape
         self.dustmasses = TypedData(self.airdensities.data * self.totaldustmmr.data, "Dust concentrations", self.dates, unit="kg m$^{-3}$")
-        self.windspeeds = TypedData(self.get_data_by_name("V component of wind", self.gribdata_temps),
-                "Wind speeds (N-S component)", self.dates, unit="m s$^{-3}$"
-                )
         #assert self.dustmasses.shape == self.altitudes.shape
         print "interpolating aggregated dust masses / m2"
+        
         self.aggregateddust = TypedData(
                 interpolate_totals (self.altitudes.data, self.dustmasses.data, self.size),
                 "Column dust load", self.dates, unit="kg m$^{-2}$"
                 )
-        print "interpolating N-S net dust transport rates / m"
-        self.aggregatedrate = TypedData(
-                interpolate_totals (self.altitudes.data, self.dustmasses.data * self.windspeeds.data, self.size),
-                "Net N-S dust transfer rate", self.dates, unit="kg m$^{-1}$ s$^{-1}$"
-                )
-        print "interpolating absolute rates"
-        abstransports = interpolate_totals(self.altitudes.data, self.dustmasses.data * self.windspeeds.data, self.size, force_abs=True)
-        southward = (abstransports - self.aggregatedrate.data) / 2.0
-        self.grosstransport = TypedData(
-                abstransports - southward,
-                "Gross northward dust transfer", self.dates, "kg m$^{-1} s$^{-1}$"
-                )
+        #print "interpolating N-S net dust transport rates / m"
+        #self.aggregatedrate = TypedData(
+        #        interpolate_totals (self.altitudes.data, self.dustmasses.data * self.windspeeds.data, self.size),
+        #        "Net N-S dust transfer rate", self.dates, unit="kg m$^{-1}$ s^${-1}$"
+        #        )
+        #print "interpolating absolute rates"
+        #abstransports = interpolate_totals(self.altitudes.data, self.dustmasses.data * self.windspeeds.data, self.size, force_abs=True)
+        #southward = (abstransports - self.aggregatedrate.data) / 2.0
+        #self.grosstransport = TypedData(
+        #        abstransports - southward,
+        #        "Gross northward dust transfer", self.dates, "kg m$^{-1}$ s^${-1}$"
+        #        )
         #assert self.grosstransport.data.shape == self.aggregatedrate.data.shape
     def findclosest(self, formatsample, value, indexingcorrection=False, maxdiff = 3):
             """Find closest grid point if coorinates do not exactly

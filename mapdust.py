@@ -139,6 +139,29 @@ def parlength(par, seg=360):
         earthradius = 6388000.
         return earthradius * np.cos(np.radians(par)) * np.radians(seg)
         
+class DataReader:
+    def __init__(self, timeslots,
+                 dusttemplate = "dust_concentrations2018-04-{}-{}:00:00.grib",
+                 temptemplate = "temp_v_gh2018-04-{}-{}:00:00.grib",
+                 ):
+        dates, hours = timeslots
+        gribdata_temps, gribdata_dust = [], []
+        for date in dates:
+            for hour in hours:
+                try:
+                    print "loading dustflie"
+                    gribdata_dust.append([msg for msg in
+                            pygrib.open(dusttemplate.format(str(date).rjust(2,"0"), str(hour).rjust(2,"0")))
+                            if msg.step == 0])
+                    print "loading tempfile"
+                    gribdata_temps.append([msg for msg in
+                            pygrib.open(temptemplate.format(str(date).rjust(2,"0"), str(hour).rjust(2,"0")))
+                            if msg.step == 0])
+                
+                except IOError:
+                    break
+        
+        
         
 
 alldustmasses, allaggregatemasses, allaggregaterates = [], [], []
@@ -170,9 +193,10 @@ for date in dates:
         levels = set([msg.level for msg in tempraw])
         westernlimit, easternlimit = dataformatsample[2,0,(0,-1)]
         northernlimit, southernlimit = dataformatsample[1,(0,-1),0]
+        print dataformatsample[2,0,(0,-1)], type(dataformatsample[2,0,(0,-1)])
         #print levels
-        latgridpoints = len(dataformatsample[0])
-        longridpoints = len(dataformatsample[0][0])
+        latgridpoints, longridpoints = dataformatsample.shape[1:3]
+
         print "gridpoints along lons,lats", longridpoints, latgridpoints
         print "testing get_x_y"
         print get_x_y(50,44.4,10.78,16)
@@ -183,8 +207,12 @@ for date in dates:
         
         altitudes = get_data_by_name("Geopotential Height", tempraw)
         temperatures = get_data_by_name("Temperature", tempraw)
+        totaldustmmmrnew = np.sum([get_data_by_name(name, dustraw) for name in set([msg.name for msg in dustraw])],0)
         totaldustmmr = np.array([np.array(np.sum([msg.data()[0] for msg in dustraw if msg.step == 0 and msg.level == level], 0)) for level in levels])
-        
+        print totaldustmmmrnew.shape
+        print totaldustmmr.shape
+        print (totaldustmmmrnew == totaldustmmr).all()
+        exit()
         densities = np.array([100 * level / (287.058 * temperatures[idx]) for idx,level in enumerate(levels)])
         
         dustmasses = densities * totaldustmmr

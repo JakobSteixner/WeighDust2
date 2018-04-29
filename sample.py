@@ -1,6 +1,9 @@
 #/usr/bin/python
+import sys
 
-from DataReader import *
+datareader = sys.argv[1][:-3]
+
+exec("from %s import *" % datareader)
 from plottingtools import *
 
 import subprocess
@@ -23,14 +26,14 @@ em = Euromap()
 for idx,time in enumerate(dr.timeslots):
     em.densitymap(savefilename="North_South_Dust_Transport_{}_{}.png".format(*time),
                   formatsample=dr.dataformatsample[1:],
-                  title = "North-South Dust Transport, 2018-04{}, {}:00".format(*time),
+                  title = "North-South Dust Transport, 2018-04-{}, {}:00".format(*time),
                   array3d=dr.aggregatedrate.data[idx],
                   timeslot=time,
                   scale=np.arange(-100,110,10) ** 3 * 0.00000005,
                   name=dr.aggregatedrate.name)
 try:
     # turn maps into animated gif (assumes ImageMagick is installed)
-    subprocess.call(("convert -delay 150 -loop North_South_Dust_Transport*png North_South_Transport.gif"))
+    subprocess.call(("convert North_South_Dust_Transport*png -delay 150 -loop  North_South_Transport.gif"), shell=True)
 except:
     pass
 
@@ -38,15 +41,17 @@ except:
 
 for idx,time in enumerate(dr.timeslots):
     em.densitymap(savefilename="Dust_Volume_with_borders_{}_{}.png".format(*time),
-                  formatsample=dr.dataformatsample[1:],
-                  title = "Total Dust Volume, 2018-04{}, {}:00".format(*time),
-                  array3d=dr.aggregateddust.data[idx],
-                  timeslot=time,
+		  formatsample=dr.dataformatsample[1:],
+		  title = "Total Dust Volume, 2018-04{}, {}:00".format(*time),
+		  array3d=dr.aggregateddust.data[idx],
+		  timeslot=time,
 		  countries=True,
-                  scale="posonly", # string identifier of a predefined scale that seemed to work well
-                  name=dr.aggregateddust.name)
+		  scale="posonly", # string identifier of a predefined scale that seemed to work well
+		  name=dr.aggregateddust.name)
+
+print "map 2 drawn"
 
 # plot the volume of dust crossing the 38th parallel in the central and eastern Mediterranean
 p = Plotter(dr)
-p.plotlatitude(["aggregatedrate", "grosstransport"], 38.0, 8., 28., title="Gross_Net_dust_transports_2018_05_{}-{}.png".format(*dr.timeslots[0,(0,-1)]))
+p.plotlatitude(["aggregatedrate", "grosstransport"], 38.0, 8., 28., scale=False, title="Gross Net dust transports", forcenolabel=True, secondstohours=True,ylabel="kg h$^{-1}$")
 
