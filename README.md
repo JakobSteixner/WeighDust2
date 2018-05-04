@@ -2,7 +2,7 @@ Quick Description
 ===========
 
 A set of scripts to plot dust concentrations (or rather, aggregate dust
-loads per square meter surface, which may be more useful for many application) and/or dust transport rates (with current parameters, only alon north-south-axis).
+loads per square meter surface, which may be more useful for many application) and/or dust transport rates (with current parameters, only along north-south-axis).
 
 Requirements
 ====
@@ -33,4 +33,4 @@ A single fully functioning script prototype is also available as `mapdust.py`.
 Legal
 ===
 
-No warranty, free reuse (Public Domain
+No warranty, free reuse (Public Domain)
