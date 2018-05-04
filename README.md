@@ -30,7 +30,7 @@ The script `sample.py` illustrates these module's use.
 Script version
 ---------
 A single fully functioning script prototype is also available as `mapdust.py`.
-`python mapdust.py` (draws the maps)
+Usage: type `python mapdust.py` into the command line (draws the maps)
  
 Legal
 ===
