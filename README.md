@@ -17,17 +17,19 @@ For downloading the raw data, you need a free account with the [European Centre 
 
 Usage
 ===
+
+The script `request.py` (pulls the required data from ECMWF; most of the keys in the request syntax are self explanatory, if you need more details, start [here](https://software.ecmwf.int/wiki/display/WEBAPI/Brief+MARS+request+syntax)) can be used to pull data from the ECMWF's repository.
+It requires the ECMWFapi module and a (free) registration to obtain a user key. Once the raw data are available, there are two options:
+
 Modular version
 ---------
-`DataReader` parses the `.grib`-files, `plottingtools` has two classes speciallydesigned to deas with DR's output, one for producing maps (using Basemap), the other one for line graphs.
+`DataReader` parses the `.grib`-files, `plottingtools` has two classes specially designed to deal with DR's output, one for producing maps (using Basemap), the other one for line graphs.
 
 The script `sample.py` illustrates these module's use.
 
 Script version
 ---------
 A single fully functioning script prototype is also available as `mapdust.py`.
-
-`python request.py` (pulls the required data from ECMWF; most of the keys in the request syntax are self explanatory, if you need more details, start [here](https://software.ecmwf.int/wiki/display/WEBAPI/Brief+MARS+request+syntax))
 `python mapdust.py` (draws the maps)
  
 Legal
