@@ -29,10 +29,6 @@ A single fully functioning script prototype is also available as `mapdust.py`.
 
 `python request.py` (pulls the required data from ECMWF; most of the keys in the request syntax are self explanatory, if you need more details, start [here](https://software.ecmwf.int/wiki/display/WEBAPI/Brief+MARS+request+syntax))
 `python mapdust.py` (draws the maps)
-
-Optionally (assumes you have ImageMagick installed) to create animated gifs:
-`convert -delay 150 -loop 0 D_concentration_map_*.png Dust_concentrations.gif`
-`convert -delay 150 -loop 0 Transport_rate*.png Transport_rates.gif`
  
 Legal
 ===
